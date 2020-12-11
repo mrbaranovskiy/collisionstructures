@@ -99,7 +99,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="asyncAPI.cu" />
-
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="kernels.cuh" />
+    <ClInclude Include="linearalgebra.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cuda_common.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
