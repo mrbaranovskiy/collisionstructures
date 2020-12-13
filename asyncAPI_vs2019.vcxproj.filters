@@ -18,6 +18,9 @@
     <ClInclude Include="kernels.cuh">
       <Filter>kernels</Filter>
     </ClInclude>
+    <ClInclude Include="datastructure.cuh">
+      <Filter>datastructures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cuda_common.cuh" />

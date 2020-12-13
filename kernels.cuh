@@ -1,15 +1,14 @@
 #pragma once
 
-#include "linearalgebra.cuh"
 #include "cuda_common.cuh"
-#include <math_functions.h>
-
-using namespace threeshape::linearalgebra;
+#include "linearalgebra.cuh"
 
 namespace threeshape
 {
 	namespace kernels
 	{
+		using namespace linearalgebra;
+		using namespace datastructures;
 
 		/**
 		 * \brief
@@ -18,9 +17,10 @@ namespace threeshape
 		 * \param axis2modelInv - Inverted axis to model.
 		 * \param N
 		 */
-		KERNEL inline auto resizeToFit(double output[4], const Vector3d* vertices, const Matrix4x4d axis2modelInv, const int N) -> void
+		KERNEL auto resizeToFit(double output[4], Vector3d* const vertices, Matrix4x4d* axis2modelInv, const int N) -> void
 		{
-			__shared__ Matrix4x4d m2axis = axis2modelInv;
+			/*__shared__ Matrix4x4d m2axis;
+			m2axis = *axis2modelInv;*/
 
 			extern __shared__ double aminz[];
 			extern __shared__ double amaxz[];
@@ -38,14 +38,16 @@ namespace threeshape
 
 			for (unsigned int s = i; s < N; s += blockDim.x * gridDim.x) 
 			{
-				const auto point = m2axis.transform(vertices[i]);
+				//const auto point = axis2modelInv->transform(vertices[i]);
+				//const auto point = transform(axis2modelInv, &vertices[i]);
+				Vector3d point{ 2,3,4 };
 				const double z = point.Z;
-				minz = min(minz, z);
-				maxz = max(maxz, z);
+				minz = thrust::min(minz, z);
+				maxz = thrust::max(maxz, z);
 
-				const double sqrt = linearalgebra::sqr_len(point.X, point.Y);
-				minSqrt = min(minSqrt, sqrt);
-				maxSqrt = max(maxSqrt, sqrt);
+				const double sqrt = sqr_len(point.X, point.Y);
+				minSqrt = thrust::min(minSqrt, sqrt);
+				maxSqrt = thrust::max(maxSqrt, sqrt);
 			}
 
 			aminz[tid] = minz;
@@ -57,10 +59,10 @@ namespace threeshape
 			{
 				if(tid < halfBlock && tid+halfBlock < N)
 				{
-					minz = min(aminz[tid], aminz[tid + halfBlock]);
-					maxz = max(amaxz[tid], amaxz[tid + halfBlock]);
-					minSqrt = max(aminSqr[tid], aminSqr[tid + halfBlock]);
-					maxSqrt = max(amaxSqr[tid], amaxSqr[tid + halfBlock]);
+					minz = thrust::min(aminz[tid], aminz[tid + halfBlock]);
+					maxz = thrust::max(amaxz[tid], amaxz[tid + halfBlock]);
+					minSqrt = thrust::max(aminSqr[tid], aminSqr[tid + halfBlock]);
+					maxSqrt = thrust::max(amaxSqr[tid], amaxSqr[tid + halfBlock]);
 				}
 
 				__syncthreads();

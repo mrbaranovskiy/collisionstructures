@@ -1,10 +1,11 @@
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
-#include <helper_cuda.h>
-#include <helper_functions.h> // helper utility functions
-#include <stdio.h>
 
+//#include <stdio.h>
+
+#include "cuda_common.cuh"
 #include "linearalgebra.cuh"
+#include <kernels.cuh>
+
+using namespace threeshape::datastructures;
 
 __global__ void increment_kernel(int *g_data, int inc_value)
 {
@@ -24,82 +25,99 @@ bool correct_output(int *data, const int n, const int x)
 	return true;
 }
 
+
+Vector3d RandomVector()
+{
+	threeshape::datastructures::Vector3d vec {
+		1.0f * (rand() % 9) ,
+		1.0f * (rand() % 9) ,
+		1.0f * (rand() % 9) };
+
+	return vec;
+}
+
+threeshape::datastructures::Matrix4x4d BuildRandomMatrix()
+{
+	threeshape::datastructures::Matrix4x4d mtx;
+
+	mtx.E00 = 1.0f * (rand() % 9);
+	mtx.E01 = 1.0f * (rand() % 9);
+	mtx.E02 = 1.0f * (rand() % 9);
+	mtx.E10 = 1.0f * (rand() % 9);
+	mtx.E11 = 1.0f * (rand() % 9);
+	mtx.E12 = 1.0f * (rand() % 9);
+	mtx.E20 = 1.0f * (rand() % 9);
+	mtx.E21 = 1.0f * (rand() % 9);
+	mtx.E22 = 1.0f * (rand() % 9);
+	mtx.E03 = 1.0f * (rand() % 9);
+	mtx.E13 = 1.0f * (rand() % 9);
+	mtx.E23 = 1.0f * (rand() % 9);
+
+	return mtx;
+	
+}
+
+threeshape::datastructures::Vector3d* BuildVectors(const int n)
+{
+	auto* const ptr = static_cast<threeshape::datastructures::Vector3d*>(malloc(
+		sizeof(threeshape::datastructures::Vector3d) * n));
+
+	for (int i = 0; i < n; i++)
+		ptr[i] = RandomVector();
+
+	return ptr;
+}
+
 int main(int argc, char *argv[])
 {
-	int devID;
-	cudaDeviceProp deviceProps;
+	cudaDeviceProp deviceProps{};
 
 	printf("[%s] - Starting...\n", argv[0]);
+	const int devID = findCudaDevice(argc, const_cast<const char**>(argv));
 
-	// This will pick the best possible CUDA capable device
-	devID = findCudaDevice(argc, (const char **)argv);
-
-	// get device name
 	checkCudaErrors(cudaGetDeviceProperties(&deviceProps, devID));
 	printf("CUDA device [%s]\n", deviceProps.name);
 
-	int n = 16 * 1024 * 1024;
-	int nbytes = n * sizeof(int);
-	int value = 26;
+	const int N = 9;
+	auto* vectors = BuildVectors(N);
 
-	// allocate host memory
-	int *a = 0;
-	checkCudaErrors(cudaMallocHost((void **)&a, nbytes));
-	memset(a, 0, nbytes);
+	int blockSize = 3;
+	int nBlocks = (N + blockSize - 1) / blockSize;
+	int sharedMemory = sizeof(double) * blockSize;
 
-	// allocate device memory
-	int *d_a=0;
-	checkCudaErrors(cudaMalloc((void **)&d_a, nbytes));
-	checkCudaErrors(cudaMemset(d_a, 255, nbytes));
+	
+	Vector3d* input;
+	double* output;
+	
+	Matrix4x4d* g_mtx;
+	Matrix4x4d h_mtx = BuildRandomMatrix();
+	
+	checkCudaErrors(cudaMallocManaged(&input, sizeof(Vector3d) * N));
+	checkCudaErrors(cudaMallocManaged(&output, sizeof(double) * 4));
+	checkCudaErrors(cudaMalloc(&g_mtx, sizeof(Matrix4x4d)));
 
-	// set kernel launch configuration
-	dim3 threads = dim3(512, 1);
-	dim3 blocks  = dim3(n / threads.x, 1);
+	cudaMemcpy(g_mtx, &h_mtx, sizeof(Matrix4x4d), cudaMemcpyHostToDevice);
+	
+	g_mtx = &h_mtx;
 
-	// create cuda event handles
-	cudaEvent_t start, stop;
-	checkCudaErrors(cudaEventCreate(&start));
-	checkCudaErrors(cudaEventCreate(&stop));
+	memcpy_s(input, sizeof(Vector3d) * N, vectors, sizeof(Vector3d) * N);
+	//cudaDeviceSynchronize();
 
-	StopWatchInterface *timer = NULL;
-	sdkCreateTimer(&timer);
-	sdkResetTimer(&timer);
+	threeshape::kernels::resizeToFit<<<nBlocks, blockSize, sharedMemory>>>(output, input, g_mtx, N);
+	cudaDeviceSynchronize();
 
-	checkCudaErrors(cudaDeviceSynchronize());
-	float gpu_time = 0.0f;
-
-	// asynchronously issue work to the GPU (all to stream 0)
-	sdkStartTimer(&timer);
-	cudaEventRecord(start, 0);
-	cudaMemcpyAsync(d_a, a, nbytes, cudaMemcpyHostToDevice, 0);
-	increment_kernel<<<blocks, threads, 0, 0>>>(d_a, value);
-	cudaMemcpyAsync(a, d_a, nbytes, cudaMemcpyDeviceToHost, 0);
-	cudaEventRecord(stop, 0);
-	sdkStopTimer(&timer);
-
-	// have CPU do some work while waiting for stage 1 to finish
-	unsigned long int counter=0;
-
-	while (cudaEventQuery(stop) == cudaErrorNotReady)
+	for(int i = 0; i < 4; i++)
 	{
-		counter++;
+		std::cout << output[i] << std::endl;
 	}
 
-	checkCudaErrors(cudaEventElapsedTime(&gpu_time, start, stop));
+	cudaFree(input);
+	cudaFree(output);
+	cudaFree(g_mtx);
 
-	// print the cpu and gpu times
-	printf("time spent executing by the GPU: %.2f\n", gpu_time);
-	printf("time spent by CPU in CUDA calls: %.2f\n", sdkGetTimerValue(&timer));
-	printf("CPU executed %lu iterations while waiting for GPU to finish\n", counter);
+	free(vectors);
 
-	// check the output for correctness
-	bool bFinalResults = correct_output(a, n, value);
-
-	// release resources
-	checkCudaErrors(cudaEventDestroy(start));
-	checkCudaErrors(cudaEventDestroy(stop));
-	checkCudaErrors(cudaFreeHost(a));
-	checkCudaErrors(cudaFree(d_a));
-
-	exit(bFinalResults ? EXIT_SUCCESS : EXIT_FAILURE);
+	cudaDeviceReset();
+	
+	exit(true ? EXIT_SUCCESS : EXIT_FAILURE);
 }

@@ -41,14 +41,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IntDir>$(Platform)/$(Configuration)/</IntDir>
+    <IntDir>./bin/$(Platform)/$(Configuration)/</IntDir>
     <IncludePath>$(IncludePath)</IncludePath>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules />
     <CodeAnalysisRuleAssemblies />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='x64'">
-    <OutDir>./bin/win64/$(Configuration)/</OutDir>
+    <OutDir>./bin/$(Platform)/$(Configuration)/</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -81,7 +81,11 @@
     <CudaCompile>
       <Runtime>MTd</Runtime>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateRelocatableDeviceCode>
     </CudaCompile>
+    <CudaLink>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-dc %(AdditionalOptions)</AdditionalOptions>
+    </CudaLink>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
@@ -101,6 +105,7 @@
     <CudaCompile Include="asyncAPI.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="datastructure.cuh" />
     <ClInclude Include="kernels.cuh" />
     <ClInclude Include="linearalgebra.cuh" />
   </ItemGroup>
