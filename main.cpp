@@ -1,11 +1,11 @@
 
 //#include <stdio.h>
 
-#include "cuda_common.cuh"
-#include "linearalgebra.cuh"
-#include <kernels.cuh>
+#include "cuda_common.h"
+#include "datastructure.h"
+#include "kernels.h"
 
-using namespace threeshape::datastructures;
+//extern "C" void resizeToFitCPU(double output[4], Vector3d* const vertices, Matrix4x4d * axis2modelInv, const int N);
 
 __global__ void increment_kernel(int *g_data, int inc_value)
 {
@@ -13,22 +13,9 @@ __global__ void increment_kernel(int *g_data, int inc_value)
 	g_data[idx] = g_data[idx] + inc_value;
 }
 
-bool correct_output(int *data, const int n, const int x)
-{
-	for (int i = 0; i < n; i++)
-		if (data[i] != x)
-		{
-			printf("Error! data[%d] = %d, ref = %d\n", i, data[i], x);
-			return false;
-		}
-
-	return true;
-}
-
-
 Vector3d RandomVector()
 {
-	threeshape::datastructures::Vector3d vec {
+	 Vector3d vec {
 		1.0f * (rand() % 9) ,
 		1.0f * (rand() % 9) ,
 		1.0f * (rand() % 9) };
@@ -36,9 +23,9 @@ Vector3d RandomVector()
 	return vec;
 }
 
-threeshape::datastructures::Matrix4x4d BuildRandomMatrix()
+ Matrix4x4d BuildRandomMatrix()
 {
-	threeshape::datastructures::Matrix4x4d mtx;
+	 Matrix4x4d mtx;
 
 	mtx.E00 = 1.0f * (rand() % 9);
 	mtx.E01 = 1.0f * (rand() % 9);
@@ -57,10 +44,10 @@ threeshape::datastructures::Matrix4x4d BuildRandomMatrix()
 	
 }
 
-threeshape::datastructures::Vector3d* BuildVectors(const int n)
+ Vector3d* BuildVectors(const int n)
 {
-	auto* const ptr = static_cast<threeshape::datastructures::Vector3d*>(malloc(
-		sizeof(threeshape::datastructures::Vector3d) * n));
+	auto* const ptr = static_cast< Vector3d*>(malloc(
+		sizeof( Vector3d) * n));
 
 	for (int i = 0; i < n; i++)
 		ptr[i] = RandomVector();
@@ -71,6 +58,7 @@ threeshape::datastructures::Vector3d* BuildVectors(const int n)
 int main(int argc, char *argv[])
 {
 	cudaDeviceProp deviceProps{};
+	cudaSetDevice(1);
 
 	printf("[%s] - Starting...\n", argv[0]);
 	const int devID = findCudaDevice(argc, const_cast<const char**>(argv));
@@ -103,7 +91,7 @@ int main(int argc, char *argv[])
 	memcpy_s(input, sizeof(Vector3d) * N, vectors, sizeof(Vector3d) * N);
 	//cudaDeviceSynchronize();
 
-	threeshape::kernels::resizeToFit<<<nBlocks, blockSize, sharedMemory>>>(output, input, g_mtx, N);
+	resizeToFitCPU(output, input, g_mtx, N);
 	cudaDeviceSynchronize();
 
 	for(int i = 0; i < 4; i++)

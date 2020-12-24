@@ -102,15 +102,16 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="asyncAPI.cu" />
+    <CudaCompile Include="main.cpp" />
+    <CudaCompile Include="kernels.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="datastructure.cuh" />
-    <ClInclude Include="kernels.cuh" />
-    <ClInclude Include="linearalgebra.cuh" />
+    <ClInclude Include="datastructure.h" />
+    <ClInclude Include="kernels.h" />
+    <ClInclude Include="linearalgebra.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cuda_common.cuh" />
+    <None Include="cuda_common.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

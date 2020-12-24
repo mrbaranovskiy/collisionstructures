@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CudaCompile Include="asyncAPI.cu" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="datastructures">
       <UniqueIdentifier>{7b9acea4-0885-443c-8e59-1e2923028a3c}</UniqueIdentifier>
     </Filter>
@@ -12,17 +9,23 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="linearalgebra.cuh">
+    <ClInclude Include="datastructure.h">
       <Filter>datastructures</Filter>
     </ClInclude>
-    <ClInclude Include="kernels.cuh">
+    <ClInclude Include="kernels.h">
       <Filter>kernels</Filter>
     </ClInclude>
-    <ClInclude Include="datastructure.cuh">
+    <ClInclude Include="kernels.cpp">
+      <Filter>kernels</Filter>
+    </ClInclude>
+    <ClInclude Include="linearalgebra.h">
       <Filter>datastructures</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="cuda_common.cuh" />
+    <CudaCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cuda_common.h" />
   </ItemGroup>
 </Project>
